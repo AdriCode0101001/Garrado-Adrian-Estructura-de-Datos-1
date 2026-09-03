@@ -9,27 +9,28 @@ Repositorio base del curso: [profjcp/INF220-EstructurasDatos1](https://github.co
 
 Cada unidad sigue la misma organización de carpetas usada en el material del curso:
 
+```
 INF220-EstructurasDatos1/
 ├── unidad0/
-│ └── ejercicios/
-│ ├── ejercicio1_refactor.py
-│ ├── ejercicio2_pila.py
-│ ├── ejercicio3_lista_enlazada.py
-│ ├── ejercicio4_interfaz_abc.py
-│ └── desafio_verificador.py
+│   └── ejercicios/
+│       ├── ejercicio1_refactor.py
+│       ├── ejercicio2_pila.py
+│       ├── ejercicio3_lista_enlazada.py
+│       ├── ejercicio4_interfaz_abc.py
+│       └── desafio_verificador.py
 ├── unidad1/
-│ └── ejercicios/
-│ ├── desafio1_copia_referencia.py
-│ ├── desafio2_stack.py
-│ ├── desafio3_nodos.py
-│ ├── desafio4_circunferencia.py
-│ ├── desafio5_garaje.py
-│ └── desafio6_linea.py
+│   └── ejercicios/
+│       ├── desafio1_copia_referencia.py
+│       ├── desafio2_stack.py
+│       ├── desafio3_nodos.py
+│       ├── desafio4_circunferencia.py
+│       ├── desafio5_garaje.py
+│       └── desafio6_linea.py
 └── unidad2/
-└── ejercicios/
-├── polinomio_trayectoria.py
-└── conjunto_estudiantes.py
-
+    └── ejercicios/
+        ├── polinomio_trayectoria.py
+        └── conjunto_estudiantes.py
+```
 
 ### ✅ Convenciones aplicadas
 
