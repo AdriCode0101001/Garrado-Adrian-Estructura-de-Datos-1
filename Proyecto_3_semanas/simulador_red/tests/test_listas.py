@@ -27,6 +27,11 @@ class PruebasListaSimple(unittest.TestCase):
         with self.assertRaises(EstructuraVaciaError):
             ListaSimple().eliminar()
 
+    def test_se_puede_recorrer(self):
+        self.assertEqual(list(self.lista), ["a", "b", "c"])
+        self.assertIn("b", self.lista)
+        self.assertNotIn("z", self.lista)
+
 
 class PruebasListaDoble(unittest.TestCase):
 
@@ -44,6 +49,9 @@ class PruebasListaDoble(unittest.TestCase):
 
     def test_eliminar_valor_inexistente(self):
         self.assertFalse(self.lista.eliminar_valor("x"))
+
+    def test_se_puede_recorrer(self):
+        self.assertEqual(list(self.lista), ["a", "b", "c"])
 
 
 class PruebasListaCircularDoble(unittest.TestCase):
@@ -71,6 +79,9 @@ class PruebasListaCircularDoble(unittest.TestCase):
     def test_anillo_vacio(self):
         with self.assertRaises(EstructuraVaciaError):
             ListaCircularDoble().avanzar_token()
+
+    def test_se_puede_recorrer_una_vuelta(self):
+        self.assertEqual(list(self.anillo), ["PC1", "PC2", "PC3"])
 
 
 if __name__ == "__main__":

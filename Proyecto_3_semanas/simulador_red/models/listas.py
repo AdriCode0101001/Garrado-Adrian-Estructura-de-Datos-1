@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Iterator, Optional
 
 from models.estructura_base import EstructuraLineal
 from models.excepciones import EstructuraVaciaError
@@ -35,6 +35,13 @@ class ListaSimple(EstructuraLineal):
             texto += f"{actual.dato} -> "
             actual = actual.siguiente
         return texto + "None"
+
+    def __iter__(self) -> Iterator[Any]:
+        """Recorre la lista de la cabeza hacia el final."""
+        actual = self._cabeza
+        while actual is not None:
+            yield actual.dato
+            actual = actual.siguiente
 
     def insertar_final(self, dato: Any) -> None:
         """Agrega un dato al final de la lista. Es O(n)."""
@@ -136,6 +143,13 @@ class ListaDoble(EstructuraLineal):
             texto += f"{actual.dato} <-> "
             actual = actual.siguiente
         return texto + "None"
+
+    def __iter__(self) -> Iterator[Any]:
+        """Recorre la lista de la cabeza hacia el final."""
+        actual = self._cabeza
+        while actual is not None:
+            yield actual.dato
+            actual = actual.siguiente
 
     def mostrar_inverso(self) -> str:
         """Muestra la lista de derecha a izquierda, usando 'anterior'."""
@@ -248,6 +262,13 @@ class ListaCircularDoble(EstructuraLineal):
             texto += f"{actual.dato} <-> "
             actual = actual.siguiente
         return texto + f"(vuelve a {self._cabeza.dato})"
+
+    def __iter__(self) -> Iterator[Any]:
+        """Recorre el anillo una sola vuelta, desde la cabeza."""
+        actual = self._cabeza
+        for _ in range(self._longitud):
+            yield actual.dato
+            actual = actual.siguiente
 
     def insertar(self, dato: Any) -> None:
         """Cumple el contrato: insertar equivale a insertar_final."""

@@ -28,6 +28,13 @@ class PruebasPila(unittest.TestCase):
         with self.assertRaises(EstructuraVaciaError):
             Pila().desapilar()
 
+    def test_se_recorre_desde_el_tope(self):
+        pila = Pila()
+        for numero in (1, 2, 3):
+            pila.apilar(numero)
+        self.assertEqual(list(pila), [3, 2, 1])
+        self.assertEqual(len(pila), 3)
+
 
 class PruebasUndoRedo(unittest.TestCase):
 
@@ -77,6 +84,14 @@ class PruebasColaPrioridad(unittest.TestCase):
         with self.assertRaises(EstructuraVaciaError):
             ColaPrioridad().desencolar()
 
+    def test_se_recorre_en_orden_de_salida(self):
+        cola = ColaPrioridad()
+        cola.encolar("datos", 1)
+        cola.encolar("voz", 3)
+        cola.encolar("video", 2)
+        self.assertEqual(list(cola), ["voz", "video", "datos"])
+        self.assertEqual(len(cola), 3)
+
 
 class PruebasColaCircular(unittest.TestCase):
 
@@ -111,6 +126,19 @@ class PruebasColaCircular(unittest.TestCase):
     def test_capacidad_invalida(self):
         with self.assertRaises(ValueError):
             ColaCircular(0)
+
+    def test_lectura_para_la_vista(self):
+        buffer = ColaCircular(3)
+        buffer.encolar("a")
+        buffer.encolar("b")
+        buffer.desencolar()
+        self.assertEqual(buffer.capacidad, 3)
+        self.assertEqual(buffer.indice_frente, 1)
+        self.assertEqual(buffer.indice_fondo, 2)
+        self.assertIsNone(buffer.celda(0))
+        self.assertEqual(buffer.celda(1), "b")
+        with self.assertRaises(AttributeError):
+            buffer.capacidad = 10
 
 
 class PruebasContrato(unittest.TestCase):

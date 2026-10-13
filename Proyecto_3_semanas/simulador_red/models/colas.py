@@ -1,7 +1,6 @@
-from typing import Any, Optional
+from typing import Any, Iterator, Optional
 
 from models.estructura_base import EstructuraLineal
-from models.excepciones import EstructuraVaciaError
 from models.nodo import Nodo
 from models.excepciones import BufferLlenoError, EstructuraVaciaError
 
@@ -19,6 +18,7 @@ class ColaPrioridad(EstructuraLineal):
 
     Sale primero el de mayor prioridad; si empatan, el que llegó antes.
     """
+
     def __init__(self) -> None:
         self._cabeza: Optional[NodoPrioridad] = None
         self._longitud: int = 0
@@ -54,6 +54,13 @@ class ColaPrioridad(EstructuraLineal):
             texto += f"{actual.dato}[p{actual.prioridad}] -> "
             actual = actual.siguiente
         return texto + "None"
+
+    def __iter__(self) -> Iterator[Any]:
+        """Recorre la lista de la cabeza hacia el final."""
+        actual = self._cabeza
+        while actual is not None:
+            yield actual.dato
+            actual = actual.siguiente
 
     def desencolar(self) -> Any:
         """Quita y devuelve el dato más urgente (el del frente). Es O(1)."""
@@ -107,6 +114,25 @@ class ColaCircular(EstructuraLineal):
     def __len__(self) -> int:
         """Devuelve la cantidad de elementos."""
         return self._cantidad
+
+    @property
+    def capacidad(self) -> int:
+        """Cantidad de celdas del buffer."""
+        return self._capacidad
+
+    @property
+    def indice_frente(self) -> int:
+        """Celda donde está el paquete más viejo."""
+        return self._frente
+
+    @property
+    def indice_fondo(self) -> int:
+        """Celda donde se escribirá el próximo paquete."""
+        return self._fondo
+
+    def celda(self, indice: int) -> Any:
+        """Contenido de una celda (None si está libre). Solo lectura."""
+        return self._datos[indice]
 
     def encolar(self, dato: Any) -> None:
         """Agrega un dato al fondo. Lanza BufferLlenoError si no cabe. O(1)."""

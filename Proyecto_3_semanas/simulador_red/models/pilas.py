@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Iterator
 
 from models.estructura_base import EstructuraLineal
 from models.excepciones import EstructuraVaciaError
@@ -59,6 +59,13 @@ class Pila(EstructuraLineal):
             actual = actual.siguiente
         return texto + "None"
 
+    def __iter__(self) -> Iterator[Any]:
+        """Recorre la pila desde el tope hacia el fondo."""
+        actual = self._tope
+        while actual is not None:
+            yield actual.dato
+            actual = actual.siguiente
+
 
 class UndoRedoManager:
     """Historial de acciones con deshacer y rehacer, usando dos pilas."""
@@ -99,3 +106,13 @@ class UndoRedoManager:
     def __str__(self) -> str:
         """Muestra las dos pilas."""
         return f"DESHACER: {self._deshacer}\nREHACER:  {self._rehacer}"
+
+    @property
+    def pila_deshacer(self) -> Pila:
+        """Acciones que se pueden deshacer (solo lectura)."""
+        return self._deshacer
+
+    @property
+    def pila_rehacer(self) -> Pila:
+        """Acciones que se pueden rehacer (solo lectura)."""
+        return self._rehacer
