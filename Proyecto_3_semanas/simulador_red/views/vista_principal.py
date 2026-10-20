@@ -7,9 +7,10 @@ from views.componentes import (panel_buffer, panel_historial, panel_osi,
                                panel_paquetes, panel_tabla, seccion)
 from views.panel_comparacion import panel_comparacion
 from views.panel_metricas import panel_metricas
+from views.topologia import Topologia
 
 ANCHO_MOVIL = 700
-RAFAGA = 10  # NUEVO 19B
+RAFAGA = 10
 
 
 def boton(texto: str, accion: Any, principal: bool = False) -> ft.Button:
@@ -60,8 +61,11 @@ class VistaPrincipal:
         self.panel_tabla = ft.Container()
         self.panel_historial = ft.Container()
         self.anillo_visual = AnilloVisual()
+        self.topologia = Topologia()
         self.paquete_osi: Any = None
         self.capas_visibles: Any = None
+        self.router_visto: Any = None
+        self.sin_ruta_visto: int = 0
         self._armar()
 
     def _armar(self) -> None:
@@ -74,8 +78,7 @@ class VistaPrincipal:
                 boton("Enviar datos", lambda: self._enviar("datos")),
                 boton("Siguiente ciclo", self._ciclo, principal=True),
                 boton("Pasar token", self._pasar_token),
-                boton(f"Congestión ({RAFAGA} paquetes)",  # NUEVO 19B
-                      self._congestion),
+                boton(f"Congestión ({RAFAGA} paquetes)", self._congestion),
             ],
             wrap=True,
         )
@@ -127,6 +130,22 @@ class VistaPrincipal:
             ]),
             col={"sm": 12, "md": 6},
         )
+        acciones = ft.Row(
+            [
+                boton("Enviar voz", lambda: self._enviar("voz")),
+                boton("Enviar video", lambda: self._enviar("video")),
+                boton("Enviar datos", lambda: self._enviar("datos")),
+                boton("Siguiente ciclo", self._ciclo, principal=True),
+                boton("Pasar token", self._pasar_token),
+            ],
+            wrap=True,
+        )
+        self.grupo_topologia = ft.Container(
+            content=seccion("Topología (modo simulación)", [
+                acciones,
+                self.topologia.control,
+            ]),
+        )
         self.navegacion = ft.NavigationBar(
             destinations=[
                 ft.NavigationBarDestination(icon=ft.Icons.DASHBOARD,
@@ -137,6 +156,8 @@ class VistaPrincipal:
                                             label="Tráfico"),
                 ft.NavigationBarDestination(icon=ft.Icons.HUB,
                                             label="Red"),
+                ft.NavigationBarDestination(icon=ft.Icons.LAN,
+                                            label="Topología"),
             ],
             selected_index=0,
             on_change=lambda e: self._mostrar(
@@ -148,16 +169,18 @@ class VistaPrincipal:
             ft.Text("Simulador de Red con QoS", size=24,
                     weight=ft.FontWeight.BOLD),
             self.grupo_controles,
+            self.grupo_topologia,
             ft.ResponsiveRow([self.grupo_trafico, self.grupo_red]),
         )
         self._ajustar_ancho()
 
     def _mostrar(self, pestana: int) -> None:
-        """Muestra todo (0) o solo una sección (1, 2 o 3)."""
+        """Muestra todo (0) o solo una sección (1, 2, 3 o 4)."""
         self.navegacion.selected_index = pestana
         self.grupo_controles.visible = pestana in (0, 1)
         self.grupo_trafico.visible = pestana in (0, 2)
         self.grupo_red.visible = pestana in (0, 3)
+        self.grupo_topologia.visible = pestana in (0, 4)
         self.page.update()
 
     def _ajustar_ancho(self) -> None:
@@ -168,25 +191,48 @@ class VistaPrincipal:
 
     def _enviar(self, tipo: str) -> None:
         destino = self.destino_paquete.value or "LAN"
+        origen = self.controlador.token_actual() or ""
         recibido = self.controlador.enviar_paquete(tipo, destino)
+        self.page.run_task(self.topologia.animar_envio, origen, tipo,
+                           recibido, self._ciclo_actual())
         if recibido:
             self.aviso.value = ""
         else:
             self.aviso.value = "Buffer lleno: paquete descartado"
         self.page.update()
 
-    def _congestion(self) -> None:  # NUEVO 19B
+    def _congestion(self) -> None:
         """Manda una ráfaga de paquetes de golpe para llenar el buffer."""
+        origen = self.controlador.token_actual() or ""
         aceptados = self.controlador.simular_congestion(RAFAGA)
         perdidos = RAFAGA - aceptados
+        tipos = ("datos", "video", "voz")
+        for numero in range(RAFAGA):
+            self.page.run_task(self.topologia.animar_envio, origen,
+                               tipos[numero % 3], numero < aceptados,
+                               self._ciclo_actual(), numero * 0.15)
         self.aviso.value = (
             f"Congestión: entraron {aceptados} de {RAFAGA}; "
             f"{perdidos} descartados por buffer lleno"
         )
         self.page.update()
 
+    def _ciclo_actual(self) -> int:
+        """Número de ciclo que se está mostrando (0 al inicio)."""
+        if self.router_visto is None:
+            return 0
+        return self.router_visto.ciclo
+
     def _ciclo(self) -> None:
+        """Procesa un ciclo y anima por dónde salió cada paquete."""
+        sin_ruta_antes = self.sin_ruta_visto
         self.controlador.procesar_ciclo()
+        router = self.router_visto
+        viajes = [(p.id, p.tipo, p.salida, p.destino)
+                  for p in router.ultima_salida]
+        perdidos = router.sin_ruta - sin_ruta_antes
+        self.page.run_task(self.topologia.animar_ciclo, viajes, perdidos,
+                           router.ciclo)
 
     def _pasar_token(self) -> None:
         self.controlador.avanzar_token()
@@ -243,6 +289,8 @@ class VistaPrincipal:
 
     def actualizar(self, router: Any, anillo: Any) -> None:
         """Redibuja la pantalla con el estado actual (solo lectura)."""
+        self.router_visto = router
+        self.sin_ruta_visto = router.sin_ruta
         self.aviso.value = ""
         self._actualizar_opciones(router)
         modo = "QoS" if router.modo_qos else "FIFO"
@@ -281,6 +329,7 @@ class VistaPrincipal:
         equipos = " ⟳ ".join(str(e) for e in anillo)
         dueno = self.controlador.token_actual()
         self.anillo_visual.actualizar(anillo, dueno)
+        self.topologia.actualizar(router, anillo, dueno)
         self.anillo.value = (
             f"Anillo: {equipos or 'vacío'} | "
             f"Token (envía): {dueno or 'nadie'}"
