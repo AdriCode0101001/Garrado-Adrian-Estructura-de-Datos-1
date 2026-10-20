@@ -1,0 +1,6 @@
+[project]
+name = "simulador-red"
+version = "1.0.0"
+description = "Simulador de Red con QoS - INF220 UAGRM"
+requires-python = ">=3.12"
+dependencies = ["flet==1.0.3"]

@@ -4,6 +4,7 @@ from models.colas import ColaCircular, ColaPrioridad
 from models.excepciones import BufferLlenoError
 from models.listas import ListaDoble, ListaSimple
 from models.pilas import Pila
+from models.metricas import Metricas
 
 
 def prioridad_de(tipo: str) -> int:
@@ -105,6 +106,7 @@ class Router:
         self.descartados: int = 0
         self.sin_ruta: int = 0
         self.ultima_salida: ListaSimple = ListaSimple()
+        self.metricas: Metricas = Metricas()
 
     def agregar_interfaz(self, interfaz: Interfaz) -> None:
         """Conecta un puerto al router."""
@@ -202,6 +204,7 @@ class Router:
             paquete.salida = ruta.interfaz
             salida.insertar_final(paquete)
             self.enviados += 1
+            self.metricas.registrar(paquete)
             cupo -= 1
         return salida
 

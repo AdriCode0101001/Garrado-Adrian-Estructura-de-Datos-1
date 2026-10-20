@@ -1,5 +1,6 @@
 from typing import Any, Optional
 
+from models.comparador import Comparacion
 from models.listas import ListaCircularDoble, ListaSimple
 from models.network_engine import Paquete, Router, Ruta
 from models.pilas import Pila, UndoRedoManager
@@ -148,6 +149,19 @@ class AppController:
     def acciones_rehacer(self) -> Pila:
         """Acciones que se pueden rehacer (la más reciente primero)."""
         return self.historial.pila_rehacer
+
+    def comparar_modos(self) -> Comparacion:
+        """Simula el mismo lote con QoS y con FIFO sin tocar el router."""
+        return Comparacion(self.router)
+
+    def simular_congestion(self, cantidad: int = 20) -> int:
+        """Envía 'cantidad' paquetes de golpe; devuelve cuántos entraron."""
+        tipos = ("datos", "video", "voz")
+        aceptados = 0
+        for numero in range(cantidad):
+            if self.enviar_paquete(tipos[numero % 3]):
+                aceptados += 1
+        return aceptados
 
 
 class Accion:

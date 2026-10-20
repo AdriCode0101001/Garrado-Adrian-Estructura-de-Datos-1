@@ -1,4 +1,5 @@
 import flet as ft
+import sys
 
 from controllers.app_controller import AppController
 from models.network_engine import Interfaz, Router, Ruta
@@ -26,4 +27,10 @@ def main(page: ft.Page) -> None:
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    if "--red" in sys.argv:
+        ft.run(main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0",
+               port=8550)
+    elif "--web" in sys.argv:
+        ft.run(main, view=ft.AppView.WEB_BROWSER, port=8550)
+    else:
+        ft.run(main)

@@ -2,8 +2,22 @@ from typing import Any
 
 import flet as ft
 
+from views.anillo_visual import AnilloVisual
 from views.componentes import (panel_buffer, panel_historial, panel_osi,
                                panel_paquetes, panel_tabla, seccion)
+from views.panel_comparacion import panel_comparacion
+from views.panel_metricas import panel_metricas
+
+ANCHO_MOVIL = 700
+RAFAGA = 10  # NUEVO 19B
+
+
+def boton(texto: str, accion: Any, principal: bool = False) -> ft.Button:
+    """Botón alto (48 px) para que sea cómodo de tocar con el dedo."""
+    if principal:
+        return ft.FilledButton(texto, on_click=lambda e: accion(),
+                               height=48)
+    return ft.Button(texto, on_click=lambda e: accion(), height=48)
 
 
 class VistaPrincipal:
@@ -20,16 +34,15 @@ class VistaPrincipal:
         )
         self.destino_paquete = ft.Dropdown(label="Destino del paquete",
                                            value="LAN", width=200)
-        self.campo_destino = ft.TextField(label="Destino de la ruta",
-                                          value="WAN2", width=170)
+        self.campo_destino = ft.TextField(
+            label="Destino de la ruta", value="WAN2", width=170,
+            helper="Red nueva o existente")
         self.interfaz = ft.Dropdown(label="Interfaz", value="eth0",
                                     width=130)
         self.campo_metrica = ft.TextField(label="Métrica", value="3",
                                           width=100)
-        self.boton_deshacer = ft.Button(
-            "Deshacer", on_click=lambda e: self.controlador.deshacer())
-        self.boton_rehacer = ft.Button(
-            "Rehacer", on_click=lambda e: self.controlador.rehacer())
+        self.boton_deshacer = boton("Deshacer", self.controlador.deshacer)
+        self.boton_rehacer = boton("Rehacer", self.controlador.rehacer)
         self.estado = ft.Text(size=16)
         self.colas = ft.Text(size=16)
         self.interfaces = ft.Text(size=16)
@@ -38,13 +51,15 @@ class VistaPrincipal:
         self.panel_buffer = ft.Container()
         self.panel_cola = ft.Container()
         self.panel_salida = ft.Container()
-        self.boton_osi = ft.Button(
-            "Ver encapsulamiento paso a paso",
-            on_click=lambda e: self._paso_osi(),
-        )
+        self.boton_osi = boton("Ver encapsulamiento paso a paso",
+                               self._paso_osi)
         self.panel_osi = ft.Container()
+        self.panel_metricas = ft.Container()
+        self.panel_comparacion = ft.Container(
+            content=panel_comparacion(None))
         self.panel_tabla = ft.Container()
         self.panel_historial = ft.Container()
+        self.anillo_visual = AnilloVisual()
         self.paquete_osi: Any = None
         self.capas_visibles: Any = None
         self._armar()
@@ -54,16 +69,13 @@ class VistaPrincipal:
         trafico = ft.Row(
             [
                 self.destino_paquete,
-                ft.Button("Enviar voz",
-                          on_click=lambda e: self._enviar("voz")),
-                ft.Button("Enviar video",
-                          on_click=lambda e: self._enviar("video")),
-                ft.Button("Enviar datos",
-                          on_click=lambda e: self._enviar("datos")),
-                ft.FilledButton("Siguiente ciclo",
-                                on_click=lambda e: self._ciclo()),
-                ft.Button("Pasar token",
-                          on_click=lambda e: self._pasar_token()),
+                boton("Enviar voz", lambda: self._enviar("voz")),
+                boton("Enviar video", lambda: self._enviar("video")),
+                boton("Enviar datos", lambda: self._enviar("datos")),
+                boton("Siguiente ciclo", self._ciclo, principal=True),
+                boton("Pasar token", self._pasar_token),
+                boton(f"Congestión ({RAFAGA} paquetes)",  # NUEVO 19B
+                      self._congestion),
             ],
             wrap=True,
         )
@@ -72,35 +84,14 @@ class VistaPrincipal:
                 self.campo_destino,
                 self.interfaz,
                 self.campo_metrica,
-                ft.Button("Agregar ruta",
-                          on_click=lambda e: self._agregar_ruta()),
-                ft.Button("Caer/levantar interfaz",
-                          on_click=lambda e: self._alternar_interfaz()),
+                boton("Agregar ruta", self._agregar_ruta),
+                boton("Caer/levantar interfaz", self._alternar_interfaz),
                 self.boton_deshacer,
                 self.boton_rehacer,
             ],
             wrap=True,
         )
-        columna_trafico = ft.Container(
-            content=seccion("Tráfico", [
-                self.panel_buffer,
-                self.panel_cola,
-                self.panel_salida,
-                self.boton_osi,
-                self.panel_osi,
-            ]),
-            col={"sm": 12, "md": 6},
-        )
-        columna_red = ft.Container(
-            content=seccion("Red y configuración", [
-                self.panel_tabla,
-                self.panel_historial,
-            ]),
-            col={"sm": 12, "md": 6},
-        )
-        self.page.add(
-            ft.Text("Simulador de Red con QoS", size=24,
-                    weight=ft.FontWeight.BOLD),
+        self.grupo_controles = ft.Column([
             seccion("Controles", [
                 trafico,
                 self.interruptor,
@@ -113,8 +104,67 @@ class VistaPrincipal:
                 self.interfaces,
                 self.anillo,
             ]),
-            ft.ResponsiveRow([columna_trafico, columna_red]),
+        ])
+        self.grupo_trafico = ft.Container(
+            content=seccion("Tráfico", [
+                self.panel_buffer,
+                self.panel_cola,
+                self.panel_salida,
+                self.panel_metricas,
+                boton("Comparar FIFO vs QoS", self._comparar),
+                self.panel_comparacion,
+                self.boton_osi,
+                self.panel_osi,
+            ]),
+            col={"sm": 12, "md": 6},
         )
+        self.grupo_red = ft.Container(
+            content=seccion("Red y configuración", [
+                self.anillo_visual.control,
+                boton("Pasar token", self._pasar_token),
+                self.panel_tabla,
+                self.panel_historial,
+            ]),
+            col={"sm": 12, "md": 6},
+        )
+        self.navegacion = ft.NavigationBar(
+            destinations=[
+                ft.NavigationBarDestination(icon=ft.Icons.DASHBOARD,
+                                            label="Todo"),
+                ft.NavigationBarDestination(icon=ft.Icons.TUNE,
+                                            label="Controles"),
+                ft.NavigationBarDestination(icon=ft.Icons.SWAP_HORIZ,
+                                            label="Tráfico"),
+                ft.NavigationBarDestination(icon=ft.Icons.HUB,
+                                            label="Red"),
+            ],
+            selected_index=0,
+            on_change=lambda e: self._mostrar(
+                self.navegacion.selected_index),
+        )
+        self.page.navigation_bar = self.navegacion
+        self.page.on_resize = lambda e: self._ajustar_ancho()
+        self.page.add(
+            ft.Text("Simulador de Red con QoS", size=24,
+                    weight=ft.FontWeight.BOLD),
+            self.grupo_controles,
+            ft.ResponsiveRow([self.grupo_trafico, self.grupo_red]),
+        )
+        self._ajustar_ancho()
+
+    def _mostrar(self, pestana: int) -> None:
+        """Muestra todo (0) o solo una sección (1, 2 o 3)."""
+        self.navegacion.selected_index = pestana
+        self.grupo_controles.visible = pestana in (0, 1)
+        self.grupo_trafico.visible = pestana in (0, 2)
+        self.grupo_red.visible = pestana in (0, 3)
+        self.page.update()
+
+    def _ajustar_ancho(self) -> None:
+        """En pantallas angostas, cambia de 'Todo' a una sola sección."""
+        ancho = self.page.width or ANCHO_MOVIL
+        if ancho < ANCHO_MOVIL and self.navegacion.selected_index == 0:
+            self._mostrar(1)
 
     def _enviar(self, tipo: str) -> None:
         destino = self.destino_paquete.value or "LAN"
@@ -123,6 +173,16 @@ class VistaPrincipal:
             self.aviso.value = ""
         else:
             self.aviso.value = "Buffer lleno: paquete descartado"
+        self.page.update()
+
+    def _congestion(self) -> None:  # NUEVO 19B
+        """Manda una ráfaga de paquetes de golpe para llenar el buffer."""
+        aceptados = self.controlador.simular_congestion(RAFAGA)
+        perdidos = RAFAGA - aceptados
+        self.aviso.value = (
+            f"Congestión: entraron {aceptados} de {RAFAGA}; "
+            f"{perdidos} descartados por buffer lleno"
+        )
         self.page.update()
 
     def _ciclo(self) -> None:
@@ -147,6 +207,12 @@ class VistaPrincipal:
 
     def _alternar_interfaz(self) -> None:
         self.controlador.alternar_interfaz(self.interfaz.value or "eth0")
+
+    def _comparar(self) -> None:
+        """Pide la comparación al controlador y la muestra en la tabla."""
+        comparacion = self.controlador.comparar_modos()
+        self.panel_comparacion.content = panel_comparacion(comparacion)
+        self.page.update()
 
     def _paso_osi(self) -> None:
         """Muestra una capa más de la pila OSI (solo es un efecto visual)."""
@@ -199,6 +265,7 @@ class VistaPrincipal:
             router.clasificador)
         self.panel_salida.content = panel_paquetes(
             "Salieron en el último ciclo", router.ultima_salida)
+        self.panel_metricas.content = panel_metricas(router)
         ultimo = None
         for paquete in router.ultima_salida:
             ultimo = paquete
@@ -213,6 +280,7 @@ class VistaPrincipal:
         self.boton_rehacer.disabled = not self.controlador.puede_rehacer()
         equipos = " ⟳ ".join(str(e) for e in anillo)
         dueno = self.controlador.token_actual()
+        self.anillo_visual.actualizar(anillo, dueno)
         self.anillo.value = (
             f"Anillo: {equipos or 'vacío'} | "
             f"Token (envía): {dueno or 'nadie'}"
